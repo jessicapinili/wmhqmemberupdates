@@ -33,11 +33,13 @@ export default async (req) => {
   // ---------- auth ----------
   if (path === "/login" && method === "POST") {
     const { email, password } = await req.json().catch(() => ({}));
-    const okEmail = safeEq(String(email || "").trim().toLowerCase(), String(process.env.ADMIN_EMAIL || "").trim().toLowerCase());
-    const okPass = safeEq(String(password || ""), String(process.env.ADMIN_PASSWORD || ""));
-    if (!process.env.ADMIN_PASSWORD || !process.env.SESSION_SECRET || !okEmail || !okPass) {
+    const missing = ["ADMIN_EMAIL", "ADMIN_PASSWORD", "SESSION_SECRET"].filter((k) => !String(process.env[k] || "").trim());
+    if (missing.length) return json({ error: `Admin login is not set up yet. Missing in Netlify: ${missing.join(", ")}. Add them, then redeploy.` }, 500);
+    const okEmail = safeEq(String(email || "").trim().toLowerCase(), String(process.env.ADMIN_EMAIL).trim().toLowerCase());
+    const okPass = safeEq(String(password || "").trim(), String(process.env.ADMIN_PASSWORD).trim());
+    if (!okEmail || !okPass) {
       await new Promise((r) => setTimeout(r, 600));
-      return json({ error: "That email or password is not right." }, 401);
+      return json({ error: !okEmail ? "That email is not the admin email." : "That password is not right." }, 401);
     }
     return json({ ok: true }, 200, { "set-cookie": cookie(makeToken(), SESSION_DAYS * 86400) });
   }
