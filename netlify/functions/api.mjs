@@ -34,7 +34,8 @@ const unsubToken = (email) => sign("unsub:" + email.toLowerCase()).slice(0, 32);
 const siteUrl = () => (process.env.SITE_URL || "").replace(/\/$/, "");
 function emailHtml(post, email) {
   const paras = escH(post.body).split(/\n\s*\n/).filter(Boolean).map((p) => `<p style="margin:0 0 14px 0;font-size:15px;line-height:1.6;color:#4a1a22;">${p.replace(/\n/g, "<br>")}</p>`).join("");
-  const btn = `<a href="${siteUrl()}" target="_blank" style="display:inline-block;background:#660810;color:#ffffff;font-weight:700;font-size:14px;text-decoration:none;padding:14px 28px;border-radius:100px;margin-top:6px;">See all announcements</a>`;
+  const bUrl = post.button ? escH(post.button.url) : siteUrl(), bText = post.button ? escH(post.button.text) : "See all announcements";
+  const btn = `<a href="${bUrl}" target="_blank" style="display:inline-block;background:#660810;color:#ffffff;font-weight:700;font-size:14px;text-decoration:none;padding:14px 28px;border-radius:100px;margin-top:6px;">${bText}</a>`;
   const unsub = `${siteUrl()}/api/unsubscribe?e=${encodeURIComponent(email)}&t=${unsubToken(email)}`;
   return `<!doctype html><html><body style="margin:0;padding:0;background:#f0f0f0;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f0f0f0;"><tr><td align="center" style="padding:36px 12px;">
@@ -144,6 +145,7 @@ export default async (req) => {
     if (method === "POST") {
       const post = buildPost(body);
       if (!post.title) return json({ error: "Add a title." }, 400);
+      if ((body.buttonText && !post.button) || (body.buttonUrl && !body.buttonText)) return json({ error: "For a button, add both the button text and a full link starting with https://" }, 400);
       if (body.testOnly) {
         const r = await sendEmails(post, [String(process.env.ADMIN_EMAIL).trim()]).catch((e) => ({ error: e.message }));
         return r.error ? json({ error: r.error }, 400) : json({ test: true, ...r });
