@@ -75,6 +75,52 @@ const buildPost = (body) => ({
   pinned: !!body.pinned,
 });
 
+async function runJob(store, { post, publish, sendEmail }) {
+  let published = false, email = null;
+  if (publish) {
+    let posts = (await store.get("posts", { type: "json" })) || [];
+    if (post.pinned) posts = posts.map((p) => ({ ...p, pinned: false }));
+    posts.unshift(post);
+    await store.setJSON("posts", posts);
+    published = true;
+  }
+  if (sendEmail) {
+    const members = ((await store.get("members", { type: "json" })) || { emails: [] }).emails;
+    const unsub = new Set((await store.get("unsubscribed", { type: "json" })) || []);
+    email = await sendEmails(post, members.filter((m) => !unsub.has(m))).catch((e) => ({ error: e.message }));
+  }
+  return { published, email };
+}
+export async function processDue() {
+  const store = getStore("wmhq-updates");
+  // Posts added via GitHub (public/posts.json): email once if "email": true
+  let chatSent = 0;
+  try {
+    const r = await fetch(`${siteUrl()}/posts.json`, { cache: "no-store" });
+    const filePosts = r.ok ? await r.json() : [];
+    const emailed = new Set((await store.get("emailedFilePosts", { type: "json" })) || []);
+    for (const p of filePosts) {
+      if (!p || !p.id || !p.email || emailed.has(p.id)) continue;
+      if (p.sendAt && new Date(p.sendAt).getTime() > Date.now()) continue;
+      emailed.add(p.id);
+      await store.setJSON("emailedFilePosts", [...emailed]);
+      await runJob(store, { post: buildPost({ ...p, buttonText: p.button && p.button.text, buttonUrl: p.button && p.button.url }), publish: false, sendEmail: true });
+      chatSent++;
+    }
+  } catch (e) { console.log("posts.json check failed", e.message); }
+  const sched = (await store.get("scheduled", { type: "json" })) || [];
+  const now = Date.now(), due = sched.filter((j) => new Date(j.at).getTime() <= now);
+  if (!due.length) return { ran: 0, chatSent };
+  await store.setJSON("scheduled", sched.filter((j) => new Date(j.at).getTime() > now));
+  const log = (await store.get("sentlog", { type: "json" })) || [];
+  for (const j of due) {
+    const r = await runJob(store, { ...j, post: { ...j.post, date: new Date().toISOString().slice(0, 10) } });
+    log.unshift({ id: j.id, title: j.post.title, at: new Date().toISOString(), ...r });
+  }
+  await store.setJSON("sentlog", log.slice(0, 50));
+  return { ran: due.length };
+}
+
 export default async (req) => {
   const url = new URL(req.url);
   const path = url.pathname.replace(/^\/(\.netlify\/functions\/api|api)/, "") || "/";
@@ -150,21 +196,34 @@ export default async (req) => {
         const r = await sendEmails(post, [String(process.env.ADMIN_EMAIL).trim()]).catch((e) => ({ error: e.message }));
         return r.error ? json({ error: r.error }, 400) : json({ test: true, ...r });
       }
-      if (post.pinned) posts = posts.map((p) => ({ ...p, pinned: false }));
-      posts.unshift(post);
-      await store.setJSON("posts", posts);
-      let email = null;
-      if (body.sendEmail) {
-        const members = ((await store.get("members", { type: "json" })) || { emails: [] }).emails;
-        const unsub = new Set((await store.get("unsubscribed", { type: "json" })) || []);
-        const to = members.filter((m) => !unsub.has(m));
-        email = await sendEmails(post, to).catch((e) => ({ error: e.message }));
+      const publish = body.publish !== false, sendEmail = !!body.sendEmail;
+      if (!publish && !sendEmail) return json({ error: "Tick at least one: show on the updates page, or email members." }, 400);
+      if (body.scheduleAt) {
+        const at = new Date(body.scheduleAt);
+        if (isNaN(at) || at.getTime() < Date.now() + 60000) return json({ error: "Pick a time in the future for the schedule." }, 400);
+        const sched = (await store.get("scheduled", { type: "json" })) || [];
+        sched.push({ id: post.id, at: at.toISOString(), publish, sendEmail, post });
+        sched.sort((a, b) => a.at.localeCompare(b.at));
+        await store.setJSON("scheduled", sched);
+        return json({ scheduled: true, at: at.toISOString() });
       }
-      return json({ ...post, email });
+      const result = await runJob(store, { post, publish, sendEmail });
+      return json({ ...post, ...result });
     }
     if (method === "DELETE") {
       posts = posts.filter((p) => p.id !== body.id);
       await store.setJSON("posts", posts);
+      return json({ ok: true });
+    }
+  }
+  // ---------- scheduled (admin) ----------
+  if (path === "/scheduled") {
+    let sched = (await store.get("scheduled", { type: "json" })) || [];
+    if (method === "GET") return json(sched.map((j) => ({ id: j.id, at: j.at, publish: j.publish, sendEmail: j.sendEmail, title: j.post.title })));
+    if (method === "DELETE") {
+      const body = await req.json().catch(() => ({}));
+      sched = sched.filter((j) => j.id !== body.id);
+      await store.setJSON("scheduled", sched);
       return json({ ok: true });
     }
   }

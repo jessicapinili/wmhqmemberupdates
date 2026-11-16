@@ -556,7 +556,13 @@ const intro={ pinned:true, type:"update", date:"", title:"Announcements & Update
 let posts=[intro];
 const escH=t=>String(t||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const toHtml=t=>escH(t).split(/\n\s*\n/).map(p=>`<p>${p.replace(/\n/g,"<br>")}</p>`).join("");
-fetch("/api/posts",{cache:"no-store"}).then(r=>r.ok?r.json():[]).then(list=>{
+Promise.all([
+  fetch("/api/posts",{cache:"no-store"}).then(r=>r.ok?r.json():[]).catch(()=>[]),
+  fetch("/posts.json",{cache:"no-store"}).then(r=>r.ok?r.json():[]).catch(()=>[])
+]).then(([a,b])=>{
+  const seen=new Set(),now=Date.now();
+  const list=[...b.filter(p=>p&&p.show!==false&&(!p.sendAt||new Date(p.sendAt).getTime()<=now)),...a].filter(p=>p&&p.id&&!seen.has(p.id)&&seen.add(p.id));
+  if(list.some(p=>p.pinned)){let first=true;list.forEach(p=>{if(p.pinned){if(!first)p.pinned=false;first=false;}});}
   const mapped=list.map(p=>({...p,body:toHtml(p.body)}));
   posts=mapped.some(p=>p.pinned)?mapped:[intro,...mapped];render();
 }).catch(()=>{});

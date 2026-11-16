@@ -93,7 +93,7 @@ label input,label select,label textarea{margin-top:6px}
     <!-- NEW POST -->
     <section class="card">
       <h2>New announcement</h2>
-      <p class="sub">This shows on the updates page straight away.</p>
+      <p class="sub">Choose whether it shows on the updates page, gets emailed, or both. Send now or schedule it.</p>
       <label>Title<input id="pTitle" maxlength="200"></label>
       <div class="two">
         <label>Type<select id="pType"><option value="reminder">Call reminder</option><option value="training">Training</option><option value="live">Live session</option><option value="resource">New resource</option><option value="update" selected>Update</option></select></label>
@@ -106,9 +106,19 @@ label input,label select,label textarea{margin-top:6px}
       </div>
       <label>Image link (optional)<input id="pImg" placeholder="https://"></label>
       <label class="chk"><input type="checkbox" id="pPin"> Pin to the top (replaces the current pinned post)</label>
+      <label class="chk"><input type="checkbox" id="pShow" checked> Show on the updates page</label>
       <label class="chk"><input type="checkbox" id="pEmail" checked> Email this to all members</label>
-      <div class="row"><button class="btn" id="testBtn">Send test to me</button><button class="btn primary" id="postBtn">Publish announcement</button></div>
+      <label class="chk"><input type="checkbox" id="pSched"> Schedule for later</label>
+      <label id="schedWrap" hidden>Send on (Brisbane time)<input type="datetime-local" id="pAt"></label>
+      <div class="row"><button class="btn" id="testBtn">Send test to me</button><button class="btn primary" id="postBtn">Publish now</button></div>
       <p class="msg" id="pMsg"></p>
+    </section>
+
+    <!-- SCHEDULED -->
+    <section class="card">
+      <h2>Scheduled</h2>
+      <p class="sub">Checked every 5 minutes, so it goes out within 5 minutes of the time you pick.</p>
+      <div class="list" id="sList"></div>
     </section>
 
     <!-- POSTS -->
@@ -128,7 +138,7 @@ let members={emails:[],updated:null};
 async function boot(){
   const me=await api("/me").catch(()=>({admin:false}));
   $("loginCard").hidden=me.admin; $("app").hidden=!me.admin; $("logout").hidden=!me.admin;
-  if(me.admin){$("pDate").value=new Date().toISOString().slice(0,10);loadMembers();loadPosts();}
+  if(me.admin){$("pDate").value=new Date().toISOString().slice(0,10);loadMembers();loadPosts();loadSched();}
 }
 $("loginForm").onsubmit=async e=>{e.preventDefault();$("lMsg").textContent="";
   try{await api("/login",{method:"POST",body:JSON.stringify({email:$("lEmail").value,password:$("lPass").value})});$("lPass").value="";boot();}
@@ -170,15 +180,28 @@ $("testBtn").onclick=async()=>{
   try{const r=await api("/posts",{method:"POST",body:formData({testOnly:true})});$("pMsg").textContent=r.sent?"Test sent to your admin email. Check your inbox.":"Test failed to send. Check your Resend settings.";}
   catch(err){$("pMsg").textContent=err.message;}
 };
+const bne=iso=>new Date(iso).toLocaleString("en-AU",{timeZone:"Australia/Brisbane",weekday:"short",day:"numeric",month:"short",hour:"numeric",minute:"2-digit"});
+async function loadSched(){
+  const list=await api("/scheduled");
+  $("sList").innerHTML=list.length?list.map(j=>`<div class="item"><div><b>${esc(j.title)}</b><div class="post-meta">${bne(j.at)} AEST &middot; ${[j.publish?"show on page":"",j.sendEmail?"email members":""].filter(Boolean).join(" + ")}</div></div><button class="x" data-id="${j.id}">Cancel</button></div>`).join(""):`<p class="sub" style="padding-top:10px">Nothing scheduled.</p>`;
+  document.querySelectorAll("#sList .x").forEach(b=>b.onclick=async()=>{if(!confirm("Cancel this scheduled announcement?"))return;await api("/scheduled",{method:"DELETE",body:JSON.stringify({id:b.dataset.id})});loadSched();});
+}
+const paintBtn=()=>{$("schedWrap").hidden=!$("pSched").checked;$("postBtn").textContent=$("pSched").checked?"Schedule":(!$("pShow").checked&&$("pEmail").checked?"Send email now":"Publish now");};
+["pShow","pEmail","pSched"].forEach(i=>$(i).onchange=paintBtn);
 $("postBtn").onclick=async()=>{
-  const email=$("pEmail").checked;
-  if(email&&!confirm(`Publish and email this to ${members.emails.length} members?`))return;
-  $("postBtn").disabled=true;$("pMsg").textContent=email?"Publishing and sending emails...":"Publishing...";
-  try{const r=await api("/posts",{method:"POST",body:formData({sendEmail:email})});
-    ["pTitle","pBody","pBtnText","pBtnUrl","pImg"].forEach(i=>$(i).value="");$("pPin").checked=false;
-    let m="Published.";
-    if(r.email){m+=r.email.error?` Email not sent: ${r.email.error}`:` Emailed ${r.email.sent} members${r.email.failed?`, ${r.email.failed} failed`:""}.`;}
-    $("pMsg").textContent=m;loadPosts();}
+  const show=$("pShow").checked,email=$("pEmail").checked,sched=$("pSched").checked;
+  if(!show&&!email){$("pMsg").textContent="Tick at least one: show on the updates page, or email members.";return;}
+  let scheduleAt=null;
+  if(sched){if(!$("pAt").value){$("pMsg").textContent="Pick a date and time for the schedule.";return;}scheduleAt=$("pAt").value+":00+10:00";}
+  const what=[show?"show it on the updates page":"",email?`email ${members.emails.length} members`:""].filter(Boolean).join(" and ");
+  if(!confirm(sched?`Schedule this to ${what} on ${bne(scheduleAt)} AEST?`:`This will ${what} now. Go ahead?`))return;
+  $("postBtn").disabled=true;$("pMsg").textContent=sched?"Scheduling...":"Working...";
+  try{const r=await api("/posts",{method:"POST",body:formData({publish:show,sendEmail:email,scheduleAt})});
+    ["pTitle","pBody","pBtnText","pBtnUrl","pImg","pAt"].forEach(i=>$(i).value="");$("pPin").checked=false;$("pSched").checked=false;paintBtn();
+    let m;
+    if(r.scheduled)m=`Scheduled for ${bne(r.at)} AEST.`;
+    else{m=r.published?"Published.":"";if(r.email)m+=r.email.error?` Email not sent: ${r.email.error}`:` Emailed ${r.email.sent} members${r.email.failed?`, ${r.email.failed} failed`:""}.`;}
+    $("pMsg").textContent=m.trim();loadPosts();loadSched();}
   catch(err){$("pMsg").textContent=err.message;}
   $("postBtn").disabled=false;
 };
