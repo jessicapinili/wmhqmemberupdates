@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>WMHQ Member Updates Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--dark:#3B0E11;--btn:#660810;--ink:#1a0a0a;--muted:#7a5a5a;--line:rgba(102,8,16,.15);--bg:#f0f0f0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+.top{background:var(--dark);color:#fff;padding:18px 0}
+.top-in{max-width:760px;margin:0 auto;padding:0 20px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.top b{display:block;font-size:17px}
+.top small{font-size:10px;letter-spacing:.2em;text-transform:uppercase;opacity:.75;font-weight:700}
+.top a,.top button{color:rgba(255,255,255,.85);font-size:13px;font-weight:600;text-decoration:none;background:none;border:0;cursor:pointer;font-family:inherit}
+.wrap{max-width:760px;margin:0 auto;padding:30px 20px 60px;display:flex;flex-direction:column;gap:20px}
+.card{background:#fff;border-radius:18px;padding:26px 28px;box-shadow:0 8px 24px rgba(36,7,9,.06)}
+h1{font-size:24px;font-weight:800;margin-bottom:6px}
+h2{font-size:18px;font-weight:800;margin-bottom:6px}
+.sub{font-size:14px;color:var(--muted);line-height:1.6}
+textarea,input,select{width:100%;font:inherit;font-size:15px;border:1px solid #ccc;border-radius:10px;padding:12px 14px;margin-top:14px;background:#fff;color:var(--ink)}
+textarea{min-height:110px;resize:vertical}
+label{display:block;font-size:13px;font-weight:700;margin-top:14px}
+label input,label select,label textarea{margin-top:6px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.btn{font:inherit;font-size:14px;font-weight:700;border-radius:100px;padding:11px 20px;cursor:pointer;border:1px solid #ccc;background:#fff;color:var(--btn)}
+.btn.primary{background:var(--btn);color:#fff;border-color:var(--btn)}
+.btn:disabled{opacity:.5;cursor:default}
+.list{margin-top:14px}
+.item{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 2px;border-top:1px solid #eee;font-size:15px}
+.item .x{background:none;border:0;color:var(--btn);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit}
+.post-meta{font-size:12px;color:var(--muted)}
+.msg{font-size:14px;margin-top:12px;min-height:20px;color:var(--btn)}
+.chk{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:14px;font-weight:600}
+.chk input{width:auto;margin:0}
+[hidden]{display:none!important}
+@media(max-width:600px){.two{grid-template-columns:1fr}.card{padding:22px 20px}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><div><b>Woman Mastery HQ Membership</b><small>WMHQ Member Updates Admin</small></div>
+  <div><a href="/" target="_blank" rel="noopener">Open updates page &rarr;</a> <button id="logout" hidden>&nbsp;&middot;&nbsp; Log out</button></div></div></header>
+
+<main class="wrap">
+  <!-- LOGIN -->
+  <section class="card" id="loginCard" hidden>
+    <h1>Admin login</h1>
+    <p class="sub">Only the WMHQ admin can log in here.</p>
+    <form id="loginForm">
+      <label>Email<input id="lEmail" type="email" autocomplete="username" required></label>
+      <label>Password<input id="lPass" type="password" autocomplete="current-password" required></label>
+      <div class="row"><button class="btn primary" type="submit">Log in</button></div>
+      <p class="msg" id="lMsg"></p>
+    </form>
+  </section>
+
+  <div id="app" hidden style="display:flex;flex-direction:column;gap:20px">
+    <!-- SUMMARY -->
+    <section class="card">
+      <h1>Members on the updates list</h1>
+      <p class="sub"><b id="mCount">0</b> members &middot; last updated <span id="mUpdated">never</span></p>
+      <p class="sub" style="margin-top:6px">Everyone on this list will get announcement emails once email sending is set up.</p>
+    </section>
+
+    <!-- ADD MEMBERS -->
+    <section class="card">
+      <h2>Add members</h2>
+      <p class="sub">Paste one or more emails, or upload a contacts CSV exported from Kajabi. Every email found is picked up.</p>
+      <textarea id="mText" placeholder="member@example.com&#10;another@example.com"></textarea>
+      <input type="file" id="csv" accept=".csv,text/csv" hidden>
+      <div class="row">
+        <button class="btn primary" id="addBtn">Add to list</button>
+        <button class="btn" id="csvBtn">Upload CSV</button>
+        <button class="btn" id="replaceBtn">Replace whole list</button>
+      </div>
+      <p class="msg" id="mMsg"></p>
+    </section>
+
+    <!-- CURRENT LIST -->
+    <section class="card">
+      <h2>Current list</h2>
+      <input id="search" placeholder="Search emails">
+      <div class="list" id="mList"></div>
+    </section>
+
+    <!-- NEW POST -->
+    <section class="card">
+      <h2>New announcement</h2>
+      <p class="sub">This shows on the updates page straight away.</p>
+      <label>Title<input id="pTitle" maxlength="200"></label>
+      <div class="two">
+        <label>Type<select id="pType"><option value="reminder">Call reminder</option><option value="training">Training</option><option value="live">Live session</option><option value="resource">New resource</option><option value="update" selected>Update</option></select></label>
+        <label>Date<input id="pDate" type="date"></label>
+      </div>
+      <label>Message<textarea id="pBody" placeholder="Write your announcement. A blank line starts a new paragraph."></textarea></label>
+      <div class="two">
+        <label>Button text (optional)<input id="pBtnText" maxlength="60" placeholder="Open Call Calendar"></label>
+        <label>Button link (optional)<input id="pBtnUrl" placeholder="https://"></label>
+      </div>
+      <label>Image link (optional)<input id="pImg" placeholder="https://"></label>
+      <label class="chk"><input type="checkbox" id="pPin"> Pin to the top (replaces the current pinned post)</label>
+      <div class="row"><button class="btn primary" id="postBtn">Publish announcement</button></div>
+      <p class="msg" id="pMsg"></p>
+    </section>
+
+    <!-- POSTS -->
+    <section class="card">
+      <h2>Published announcements</h2>
+      <div class="list" id="pList"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const api=async(path,opt={})=>{const r=await fetch("/api"+path,{credentials:"same-origin",headers:{"content-type":"application/json"},...opt});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||"Something went wrong.");return d;};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let members={emails:[],updated:null};
+
+async function boot(){
+  const me=await api("/me").catch(()=>({admin:false}));
+  $("loginCard").hidden=me.admin; $("app").hidden=!me.admin; $("logout").hidden=!me.admin;
+  if(me.admin){$("pDate").value=new Date().toISOString().slice(0,10);loadMembers();loadPosts();}
+}
+$("loginForm").onsubmit=async e=>{e.preventDefault();$("lMsg").textContent="";
+  try{await api("/login",{method:"POST",body:JSON.stringify({email:$("lEmail").value,password:$("lPass").value})});$("lPass").value="";boot();}
+  catch(err){$("lMsg").textContent=err.message;}};
+$("logout").onclick=async()=>{await api("/logout",{method:"POST"});boot();};
+
+function paintMembers(){
+  $("mCount").textContent=members.emails.length;
+  $("mUpdated").textContent=members.updated?new Date(members.updated).toLocaleString("en-AU"):"never";
+  const q=$("search").value.trim().toLowerCase();
+  const list=members.emails.filter(e=>!q||e.includes(q));
+  $("mList").innerHTML=list.length?list.map(e=>`<div class="item"><span>${esc(e)}</span><button class="x" data-e="${esc(e)}">Remove</button></div>`).join(""):`<p class="sub" style="padding-top:10px">No emails yet.</p>`;
+  document.querySelectorAll("#mList .x").forEach(b=>b.onclick=async()=>{if(!confirm("Remove "+b.dataset.e+"?"))return;members=await api("/members",{method:"DELETE",body:JSON.stringify({email:b.dataset.e})});paintMembers();});
+}
+async function loadMembers(){members=await api("/members");paintMembers();}
+async function addEmails(text,replace){
+  $("mMsg").textContent="Saving...";
+  try{const before=members.emails.length;members=await api("/members",{method:"POST",body:JSON.stringify({text,replace})});
+    $("mMsg").textContent=replace?`List replaced. ${members.emails.length} members.`:`Found ${members.added} emails. ${members.emails.length-before} new added.`;
+    $("mText").value="";paintMembers();}
+  catch(err){$("mMsg").textContent=err.message;}
+}
+$("addBtn").onclick=()=>addEmails($("mText").value,false);
+$("replaceBtn").onclick=()=>{if(!$("mText").value.trim()){$("mMsg").textContent="Paste the new list first, then press Replace whole list.";return;}
+  if(confirm("Replace the whole list with these emails? Everyone not in this paste will be removed."))addEmails($("mText").value,true);};
+$("csvBtn").onclick=()=>$("csv").click();
+$("csv").onchange=async()=>{const f=$("csv").files[0];if(!f)return;const t=await f.text();$("csv").value="";addEmails(t,false);};
+$("search").oninput=paintMembers;
+
+async function loadPosts(){
+  const posts=await api("/posts");
+  $("pList").innerHTML=posts.length?posts.map(p=>`<div class="item"><div><b>${p.pinned?"&#9733; ":""}${esc(p.title)}</b><div class="post-meta">${esc(p.type)} &middot; ${esc(p.date)}</div></div><button class="x" data-id="${p.id}">Delete</button></div>`).join(""):`<p class="sub" style="padding-top:10px">No announcements yet.</p>`;
+  document.querySelectorAll("#pList .x").forEach(b=>b.onclick=async()=>{if(!confirm("Delete this announcement?"))return;await api("/posts",{method:"DELETE",body:JSON.stringify({id:b.dataset.id})});loadPosts();});
+}
+$("postBtn").onclick=async()=>{
+  $("pMsg").textContent="Publishing...";
+  try{await api("/posts",{method:"POST",body:JSON.stringify({title:$("pTitle").value,type:$("pType").value,date:$("pDate").value,body:$("pBody").value,buttonText:$("pBtnText").value,buttonUrl:$("pBtnUrl").value,image:$("pImg").value,pinned:$("pPin").checked})});
+    ["pTitle","pBody","pBtnText","pBtnUrl","pImg"].forEach(i=>$(i).value="");$("pPin").checked=false;$("pMsg").textContent="Published.";loadPosts();}
+  catch(err){$("pMsg").textContent=err.message;}
+};
+boot();
+</script>
+</body>
+</html>
