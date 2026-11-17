@@ -576,6 +576,10 @@ h1 em{font-style:normal;color:#F2C6D0}
 @media(max-width:700px){.an-acc-g{grid-template-columns:1fr}.an-gal img{height:140px}.an-gal-track{animation-duration:30s}
 .an-vid{gap:18px}.an-vid .vid-btn{display:block;text-align:center}
 .vid .vplay{width:56px;height:56px}.vbar{gap:6px;padding:8px}.vbar .vsp{padding:3px 6px;font-size:10px}.vbar button svg{width:16px;height:16px}}
+@media(max-width:700px){.an-two{grid-template-columns:minmax(0,1fr);gap:18px}.an-two .an-stack{flex-direction:row}.an-two .an-stack img{width:calc(50% - 5px)}.an-two>*{min-width:0}}
+.vvol{display:flex;align-items:center;gap:6px}
+.vvol input{width:70px;accent-color:#F2C6D0;cursor:pointer}
+@media(max-width:700px){.vvol input{width:50px}}
 </style>
 </head>
 <body>
@@ -624,8 +628,9 @@ const types={all:"All",reminder:"Call reminders",training:"Trainings",live:"Live
 let filter="all", range="all";
 const fmt=d=>d?new Date(d+"T00:00:00").toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"long",year:"numeric"}):"";
 const isNew=d=>d&&(Date.now()-new Date(d+"T00:00:00"))<5*864e5;
+const VOL='<svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4zM16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="#fff" stroke-width="2" fill="none"/><path d="M4 9h4l5-4v14l-5-4H4z"/></svg>',MUTE='<svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9l6 6M22 9l-6 6" stroke="#fff" stroke-width="2"/></svg>';
 const PLAY='<svg viewBox="0 0 24 24"><path d="M7 4l14 8-14 8z"/></svg>',PAUSE='<svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>',FS='<svg viewBox="0 0 24 24"><path d="M4 4h6v2H6v4H4zM14 4h6v6h-2V6h-4zM4 14h2v4h4v2H4zM18 14h2v6h-6v-2h4z"/></svg>';
-function vidHtml(p){const v=p.video;return `<div class="vid" data-vimeo="${v.vimeo||""}">${v.cover?`<img class="vcover" src="${v.cover}" alt="">`:`<div class="vph">Cover photo coming</div>`}<button class="vplay" aria-label="Play">${PLAY}</button><div class="vbar"><button class="vpp" aria-label="Play or pause">${PAUSE}</button><div class="vprog"><div class="vfill"></div></div><div class="vsps">${[1,1.5,2,2.5].map(n=>`<button class="vsp${n===1?" act":""}" data-r="${n}">${n}x</button>`).join("")}</div><button class="vfs" aria-label="Expand">${FS}</button></div></div>`;}
+function vidHtml(p){const v=p.video;return `<div class="vid" data-vimeo="${v.vimeo||""}">${v.cover?`<img class="vcover" src="${v.cover}" alt="">`:`<div class="vph">Cover photo coming</div>`}<button class="vplay" aria-label="Play">${PLAY}</button><div class="vbar"><button class="vpp" aria-label="Play or pause">${PAUSE}</button><div class="vprog"><div class="vfill"></div></div><div class="vsps">${[1,1.5,2,2.5].map(n=>`<button class="vsp${n===1?" act":""}" data-r="${n}">${n}x</button>`).join("")}</div><div class="vvol"><button class="vmute" aria-label="Mute">${VOL}</button><input class="vrange" type="range" min="0" max="1" step="0.05" value="0.5" aria-label="Volume"></div><button class="vfs" aria-label="Expand">${FS}</button></div></div>`;}
 function loadVimeo(cb){if(window.Vimeo)return cb();const s=document.createElement("script");s.src="https://player.vimeo.com/api/player.js";s.onload=cb;document.head.appendChild(s);}
 document.addEventListener("click",e=>{const box=e.target.closest(".vid");if(!box)return;
   if(e.target.closest(".vplay")){const id=box.dataset.vimeo;if(!id){alert("Video coming soon");return;}
@@ -636,8 +641,10 @@ document.addEventListener("click",e=>{const box=e.target.closest(".vid");if(!box
   if(e.target.closest(".vpp"))pl.getPaused().then(x=>x?pl.play():pl.pause());
   if(e.target.closest(".vsp")){const b=e.target.closest(".vsp");pl.setPlaybackRate(+b.dataset.r).then(()=>{box.querySelectorAll(".vsp").forEach(x=>x.classList.toggle("act",x===b));});}
   const pr=e.target.closest(".vprog");if(pr){const r=pr.getBoundingClientRect();pl.getDuration().then(d=>pl.setCurrentTime(d*Math.min(1,Math.max(0,(e.clientX-r.left)/r.width))));}
+  if(e.target.closest(".vmute")){const r=box.querySelector(".vrange"),b=box.querySelector(".vmute");if(+r.value>0){box._v=r.value;r.value=0;}else r.value=box._v||0.5;pl.setVolume(+r.value);b.innerHTML=+r.value?VOL:MUTE;}
   if(e.target.closest(".vfs")){if(document.fullscreenElement)document.exitFullscreen();else (box.requestFullscreen||box.webkitRequestFullscreen).call(box);}
 });
+document.addEventListener("input",e=>{if(!e.target.matches(".vrange"))return;const box=e.target.closest(".vid");if(box._pl){box._pl.setVolume(+e.target.value);box.querySelector(".vmute").innerHTML=+e.target.value?VOL:MUTE;}});
 function render(){
   const now=new Date(), inRange=p=>{if(p.pinned||range==="all")return true;if(!p.date)return false;const d=new Date(p.date+"T00:00:00");
     if(range==="new")return isNew(p.date);
