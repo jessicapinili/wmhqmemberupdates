@@ -532,6 +532,22 @@ h1 em{font-style:normal;color:#F2C6D0}
 .an-wrap{max-width:920px}
 .an-two{grid-template-columns:300px 1fr;gap:32px}
 .an-card h2 .t2{display:block;font-style:italic;font-weight:600;color:var(--deep-red);margin-top:2px}
+.vid{position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:var(--dark-red,#270707);border:1px solid var(--border)}
+.vid .vcover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.vid .vph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(242,198,208,.5);font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding-top:110px}
+.vid .vplay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:68px;height:68px;border-radius:50%;background:#F2C6D0;border:3px solid #fff;box-shadow:0 6px 20px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .2s}
+.vid .vplay:hover{transform:translate(-50%,-50%) scale(1.06)}
+.vid .vplay svg{width:24px;height:24px;margin-left:4px;fill:#660810}
+.vid iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.vid .vbar{position:absolute;left:0;right:0;bottom:0;display:none;align-items:center;gap:10px;padding:10px 12px;background:linear-gradient(transparent,rgba(39,7,7,.85))}
+.vid.on .vbar{display:flex}.vid.on .vplay,.vid.on .vcover,.vid.on .vph{display:none}
+.vbar button{background:transparent;border:0;color:#fff;cursor:pointer;display:flex;align-items:center;padding:4px}
+.vbar button svg{width:18px;height:18px;fill:#fff}
+.vbar .vsp{font-family:var(--mono);font-size:12px;letter-spacing:.06em;border:1px solid rgba(255,255,255,.5);border-radius:100px;padding:3px 10px}
+.vbar .vfs{margin-left:auto}
+.an-vid{display:grid;grid-template-columns:400px 1fr;gap:32px;align-items:start}
+.an-vid .vid-btn{margin-top:14px}
+@media(max-width:760px){.an-vid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -580,6 +596,19 @@ const types={all:"All",reminder:"Call reminders",training:"Trainings",live:"Live
 let filter="all", range="all";
 const fmt=d=>d?new Date(d+"T00:00:00").toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"long",year:"numeric"}):"";
 const isNew=d=>d&&(Date.now()-new Date(d+"T00:00:00"))<5*864e5;
+const PLAY='<svg viewBox="0 0 24 24"><path d="M7 4l14 8-14 8z"/></svg>',PAUSE='<svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>',FS='<svg viewBox="0 0 24 24"><path d="M4 4h6v2H6v4H4zM14 4h6v6h-2V6h-4zM4 14h2v4h4v2H4zM18 14h2v6h-6v-2h4z"/></svg>';
+function vidHtml(p){const v=p.video;return `<div class="vid" data-vimeo="${v.vimeo||""}">${v.cover?`<img class="vcover" src="${v.cover}" alt="">`:`<div class="vph">Cover photo coming</div>`}<button class="vplay" aria-label="Play">${PLAY}</button><div class="vbar"><button class="vpp" aria-label="Play or pause">${PAUSE}</button><button class="vsp" aria-label="Speed">1x</button><button class="vfs" aria-label="Expand">${FS}</button></div></div>`;}
+function loadVimeo(cb){if(window.Vimeo)return cb();const s=document.createElement("script");s.src="https://player.vimeo.com/api/player.js";s.onload=cb;document.head.appendChild(s);}
+document.addEventListener("click",e=>{const box=e.target.closest(".vid");if(!box)return;
+  if(e.target.closest(".vplay")){const id=box.dataset.vimeo;if(!id){alert("Video coming soon");return;}
+    loadVimeo(()=>{const f=document.createElement("iframe");f.src=`https://player.vimeo.com/video/${id}?controls=0&autoplay=1&title=0&byline=0&portrait=0&dnt=1`;f.allow="autoplay; fullscreen; picture-in-picture";box.prepend(f);
+      const pl=new Vimeo.Player(f);box._pl=pl;box.classList.add("on");pl.setVolume(.5);
+      pl.on("play",()=>box.querySelector(".vpp").innerHTML=PAUSE);pl.on("pause",()=>box.querySelector(".vpp").innerHTML=PLAY);pl.on("ended",()=>box.querySelector(".vpp").innerHTML=PLAY);});return;}
+  const pl=box._pl;if(!pl)return;
+  if(e.target.closest(".vpp"))pl.getPaused().then(x=>x?pl.play():pl.pause());
+  if(e.target.closest(".vsp")){const b=e.target.closest(".vsp"),sp=[1,1.5,2,2.5],n=sp[(sp.indexOf(parseFloat(b.textContent))+1)%sp.length];pl.setPlaybackRate(n).then(()=>b.textContent=n+"x");}
+  if(e.target.closest(".vfs")){if(document.fullscreenElement)document.exitFullscreen();else (box.requestFullscreen||box.webkitRequestFullscreen).call(box);}
+});
 function render(){
   const now=new Date(), inRange=p=>{if(p.pinned||range==="all")return true;if(!p.date)return false;const d=new Date(p.date+"T00:00:00");
     if(range==="new")return isNew(p.date);
@@ -588,8 +617,8 @@ function render(){
   const list=posts.filter(p=>(filter==="all"||p.type===filter)&&inRange(p)).sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||(b.date||"").localeCompare(a.date||""));
   document.getElementById("anFeed").innerHTML=list.length?list.map(p=>`<article class="an-card${p.pinned?" pinned":""}">
     <div class="an-top">${p.pinned?`<span class="an-pin">&#9733; Pinned</span><select class="an-range" id="anRange" aria-label="Show posts from"><option value="all"${range==="all"?" selected":""}>All posts</option><option value="new"${range==="new"?" selected":""}>New</option><option value="month"${range==="month"?" selected":""}>This month</option><option value="quarter"${range==="quarter"?" selected":""}>This quarter</option></select>`:""}${p.pinned?"":`<span class="an-tag ${p.type}">${types[p.type]}</span>`}${isNew(p.date)?`<span class="an-new">New</span>`:""}<span class="an-date">${fmt(p.date)}</span></div>
-    ${(p.images||[]).length?`<div class="an-two"><div class="an-stack">${p.images.map(u=>`<img src="${u}" alt="">`).join("")}</div><div>`:""}<div class="${p.image?"an-row":""}">${p.image?(p.image==="placeholder"?`<div class="an-img ph-img"><span>Image</span></div>`:`<img class="an-img" src="${p.image}" alt="">`):""}<div><h2>${p.title}</h2><div class="an-body">${p.body}</div>
-    ${p.button?`<a class="an-btn" href="${p.button.url}" target="_blank" rel="noopener">${p.button.text} &#8599;</a>`:""}</div></div>${(p.images||[]).length?"</div></div>":""}
+    ${p.video?`<div class="an-vid"><div>${vidHtml(p)}${p.button?`<a class="an-btn vid-btn" href="${p.button.url}" target="_blank" rel="noopener">${p.button.text} &#8599;</a>`:""}</div><div>`:""}${(p.images||[]).length?`<div class="an-two"><div class="an-stack">${p.images.map(u=>`<img src="${u}" alt="">`).join("")}</div><div>`:""}<div class="${p.image?"an-row":""}">${p.image?(p.image==="placeholder"?`<div class="an-img ph-img"><span>Image</span></div>`:`<img class="an-img" src="${p.image}" alt="">`):""}<div><h2>${p.title}</h2><div class="an-body">${p.body}</div>
+    ${p.button&&!p.video?`<a class="an-btn" href="${p.button.url}" target="_blank" rel="noopener">${p.button.text} &#8599;</a>`:""}</div></div>${(p.images||[]).length?"</div></div>":""}${p.video?"</div></div>":""}
   </article>`).join("")+(list.filter(p=>!p.pinned).length?"":`<p class="an-empty">No posts for this time yet.</p>`):`<p class="an-empty">Nothing here yet.</p>`;
   const rs=document.getElementById("anRange"); if(rs)rs.onchange=()=>{range=rs.value;render();};
 }

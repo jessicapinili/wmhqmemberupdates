@@ -1,5 +1,21 @@
 [
   {
+    "id": "email-journey-mapper",
+    "date": "2026-11-17",
+    "type": "resource",
+    "title": "Brand New Tool &#128293;<br><em class=\"t2\">Email Journey Mapper</em>",
+    "body": "I've been working on this one for a hot minute, and I genuinely think it's going to help so many of you.\n\nMy favourite part? The actual map. You can see your entire email sequence laid out in front of you, so you know exactly where each email sits and what it's doing.\n\nI absolutely love it, and I hope you do too.",
+    "video": {
+      "vimeo": "1247504021",
+      "cover": "/images/email-journey-mapper-cover.svg"
+    },
+    "email": false,
+    "button": {
+      "text": "Access via WMHQ Tools",
+      "url": "https://tools.womanmasteryhqportal.com/"
+    }
+  },
+  {
     "id": "biannual-nov-2026",
     "date": "2026-11-16",
     "type": "live",
