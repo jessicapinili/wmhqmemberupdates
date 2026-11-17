@@ -13,6 +13,56 @@
     "button": {
       "text": "Access via WMHQ Tools",
       "url": "https://tools.womanmasteryhqportal.com/"
+    },
+    "gallery": [
+      "/images/email-mapper-1.jpg",
+      "/images/email-mapper-2.jpg",
+      "/images/email-mapper-3.jpg"
+    ],
+    "accordion": {
+      "title": "Email Mapper: what it does",
+      "items": [
+        [
+          "Plans your emails before you write them",
+          "You map the whole journey first, so every email has a clear purpose before you spend time on copy."
+        ],
+        [
+          "Starts you from a proven template",
+          "Choose the moment you're responding to: Welcome Sequence, Quiz / Lead Magnet, New Subscriber, Browse Abandonment, Post-Purchase or Weekly Sales Email. It loads a starting map you can change."
+        ],
+        [
+          "Sets the point of the journey",
+          "You decide the one goal, who enters, when they exit, and the offer it leads to."
+        ],
+        [
+          "Gives every email one job",
+          "Each email gets a subject line and preview text (with formulas to choose from), one job, a send time, who gets it, one call to action, and when to skip it."
+        ],
+        [
+          "Includes template guides",
+          "The Welcome Sequence has a guide for each email showing what to say and in what order."
+        ],
+        [
+          "Lets you write inside it",
+          "Write the email right there if you want to, with reminders for images and links."
+        ],
+        [
+          "Shows the full journey on one map",
+          "So you can check each email hands the reader on to the next."
+        ],
+        [
+          "Coaches you at every step",
+          "Each stage has a short voice note from me with key points, and every field has a \"?\" explaining why it matters."
+        ],
+        [
+          "Exports a branded PDF, Word doc or editable PDF",
+          "Each one includes an audit that flags what to fix before you write."
+        ],
+        [
+          "Keeps each journey separate",
+          "Starting a new one gives you a clean slate and reminds you to export the current one first."
+        ]
+      ]
     }
   },
   {

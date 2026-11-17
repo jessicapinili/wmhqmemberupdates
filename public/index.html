@@ -553,7 +553,29 @@ h1 em{font-style:normal;color:#F2C6D0}
 .vbar .vfs{margin-left:auto}
 .an-vid{display:grid;grid-template-columns:400px 1fr;gap:32px;align-items:start}
 .an-vid .vid-btn{margin-top:14px}
-@media(max-width:760px){.an-vid{grid-template-columns:1fr}}
+.an-vid>*{min-width:0}.vid{width:100%}.an-card{min-width:0;overflow:hidden}
+@media(max-width:760px){.an-vid{grid-template-columns:minmax(0,1fr)}}
+.an-gal{overflow:hidden;margin:26px -4px 0;mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
+.an-gal-track{display:flex;gap:16px;width:max-content;animation:galmove 40s linear infinite;padding:10px 4px}
+.an-gal:hover .an-gal-track{animation-play-state:paused}
+.an-gal a{flex:0 0 auto}
+.an-gal img{display:block;height:200px;width:auto;border-radius:12px;border:1px solid var(--border);transition:transform .3s,box-shadow .3s}
+.an-gal img:hover{transform:translateY(-4px) scale(1.03);box-shadow:0 12px 28px rgba(39,7,7,.18)}
+@keyframes galmove{to{transform:translateX(-50%)}}
+@media(prefers-reduced-motion:reduce){.an-gal-track{animation:none}}
+.an-acc{margin-top:22px;border-top:1px solid var(--border)}
+.an-acc-t{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--deep-red);margin:18px 0 6px}
+.an-acc details{border-bottom:1px solid var(--border)}
+.an-acc summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:14px 2px;font-weight:600;color:var(--ink)}
+.an-acc summary::-webkit-details-marker{display:none}
+.an-acc summary::after{content:"+";font-size:20px;color:var(--deep-red);transition:transform .2s}
+.an-acc details[open] summary::after{transform:rotate(45deg)}
+.an-acc details p{margin:0 0 14px;padding:0 2px;color:var(--muted,#6b5050);font-size:15px}
+.an-acc-g{display:grid;grid-template-columns:repeat(2,1fr);column-gap:28px;align-items:start}
+.an-acc summary{font-size:15px;gap:12px}
+@media(max-width:700px){.an-acc-g{grid-template-columns:1fr}.an-gal img{height:140px}.an-gal-track{animation-duration:30s}
+.an-vid{gap:18px}.an-vid .vid-btn{display:block;text-align:center}
+.vid .vplay{width:56px;height:56px}.vbar{gap:6px;padding:8px}.vbar .vsp{padding:3px 6px;font-size:10px}.vbar button svg{width:16px;height:16px}}
 </style>
 </head>
 <body>
@@ -625,7 +647,7 @@ function render(){
   document.getElementById("anFeed").innerHTML=list.length?list.map(p=>`<article class="an-card${p.pinned?" pinned":""}">
     <div class="an-top">${p.pinned?`<span class="an-pin">&#9733; Pinned</span><select class="an-range" id="anRange" aria-label="Show posts from"><option value="all"${range==="all"?" selected":""}>All posts</option><option value="new"${range==="new"?" selected":""}>New</option><option value="month"${range==="month"?" selected":""}>This month</option><option value="quarter"${range==="quarter"?" selected":""}>This quarter</option></select>`:""}${p.pinned?"":`<span class="an-tag ${p.type}">${types[p.type]}</span>`}${isNew(p.date)?`<span class="an-new">New</span>`:""}<span class="an-date">${fmt(p.date)}</span></div>
     ${p.video?`<div class="an-vid"><div>${vidHtml(p)}${p.button?`<a class="an-btn vid-btn" href="${p.button.url}" target="_blank" rel="noopener">${p.button.text} &#8599;</a>`:""}</div><div>`:""}${(p.images||[]).length?`<div class="an-two"><div class="an-stack">${p.images.map(u=>`<img src="${u}" alt="">`).join("")}</div><div>`:""}<div class="${p.image?"an-row":""}">${p.image?(p.image==="placeholder"?`<div class="an-img ph-img"><span>Image</span></div>`:`<img class="an-img" src="${p.image}" alt="">`):""}<div><h2>${p.title}</h2><div class="an-body">${p.body}</div>
-    ${p.button&&!p.video?`<a class="an-btn" href="${p.button.url}" target="_blank" rel="noopener">${p.button.text} &#8599;</a>`:""}</div></div>${(p.images||[]).length?"</div></div>":""}${p.video?"</div></div>":""}
+    ${p.button&&!p.video?`<a class="an-btn" href="${p.button.url}" target="_blank" rel="noopener">${p.button.text} &#8599;</a>`:""}</div></div>${(p.images||[]).length?"</div></div>":""}${p.video?"</div></div>":""}${(p.gallery||[]).length?`<div class="an-gal"><div class="an-gal-track">${[...p.gallery,...p.gallery].map(u=>`<a href="${u}" target="_blank" rel="noopener"><img src="${u}" alt=""></a>`).join("")}</div></div>`:""}${p.accordion?`<div class="an-acc"><p class="an-acc-t">${p.accordion.title}</p><div class="an-acc-g">${p.accordion.items.map(([h,t])=>`<details><summary>${h}</summary><p>${t}</p></details>`).join("")}</div></div>`:""}
   </article>`).join("")+(list.filter(p=>!p.pinned).length?"":`<p class="an-empty">No posts for this time yet.</p>`):`<p class="an-empty">Nothing here yet.</p>`;
   const rs=document.getElementById("anRange"); if(rs)rs.onchange=()=>{range=rs.value;render();};
 }
